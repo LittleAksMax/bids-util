@@ -39,7 +39,7 @@ func ReadPort(key string) int {
 	return port
 }
 
-func ParseDurationEnv(key string) (time.Duration, error) {
+func ParseDurationEnv(key string) time.Duration {
 	val := GetStrFromEnv(key)
 	if val == "" {
 		log.Panicf("Error converting environment variable <%s> to time duration", key)
