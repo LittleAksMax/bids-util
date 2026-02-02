@@ -43,7 +43,12 @@ func ReadPort(key string) int {
 func ParseDurationEnv(key string) time.Duration {
 	val := GetStrFromEnv(key)
 	if val == "" {
+		log.Panicf("%s is not set in environment", key)
+	}
+	
+	duration, err := time.ParseDuration(val)
+	if err != nil {
 		log.Panicf("Error converting environment variable <%s> to time duration", key)
 	}
-	return time.ParseDuration(val)
+	return duration
 }
