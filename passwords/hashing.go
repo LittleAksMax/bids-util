@@ -50,7 +50,7 @@ func HashPassword(password, pepper string, p Params) (saltB64 string, hashB64 st
 }
 
 // VerifyPassword recomputes the hash using stored salt + params and compares in constant time.
-func VerifyPassword(password, saltB64, hashB64 string, p Params) (bool, error) {
+func VerifyPassword(password, pepper, saltB64, hashB64 string, p Params) (bool, error) {
 	salt, err := base64.RawStdEncoding.DecodeString(saltB64)
 	if err != nil {
 		return false, fmt.Errorf("decode salt: %w", err)
@@ -60,7 +60,7 @@ func VerifyPassword(password, saltB64, hashB64 string, p Params) (bool, error) {
 		return false, fmt.Errorf("decode hash: %w", err)
 	}
 
-	gotHash := argon2.IDKey([]byte(password), salt, p.Time, p.Memory, p.Threads, uint32(len(wantHash)))
+	gotHash := argon2.IDKey([]byte(password + pepper), salt, p.Time, p.Memory, p.Threads, uint32(len(wantHash)))
 
 	ok := subtle.ConstantTimeCompare(gotHash, wantHash) == 1
 	return ok, nil
