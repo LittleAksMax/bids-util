@@ -28,7 +28,7 @@ var DefaultParams = Params{
 }
 
 // HashPassword generates a random salt and returns (salt, hash) as base64 strings.
-func HashPassword(password string, p Params) (saltB64 string, hashB64 string, err error) {
+func HashPassword(password, pepper string, p Params) (saltB64 string, hashB64 string, err error) {
 	if password == "" {
 		return "", "", errors.New("password must not be empty")
 	}
@@ -41,7 +41,8 @@ func HashPassword(password string, p Params) (saltB64 string, hashB64 string, er
 		return "", "", fmt.Errorf("read salt: %w", err)
 	}
 
-	hash := argon2.IDKey([]byte(password), salt, p.Time, p.Memory, p.Threads, p.KeyLen)
+	// Hash the peppered password
+	hash := argon2.IDKey([]byte(password + pepper), salt, p.Time, p.Memory, p.Threads, p.KeyLen)
 
 	return base64.RawStdEncoding.EncodeToString(salt),
 		base64.RawStdEncoding.EncodeToString(hash),
