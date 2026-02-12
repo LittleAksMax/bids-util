@@ -12,7 +12,7 @@ type ApiResponse struct {
 	Error   string      `json:"error,omitempty"`
 }
 
-func writeJSON(w http.ResponseWriter, status int, payload ApiResponse) {
+func WriteJSON(w http.ResponseWriter, status int, payload ApiResponse) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
