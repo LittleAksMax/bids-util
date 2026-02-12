@@ -1,11 +1,10 @@
-package headers
+package requests
 
 import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"strconv"
 	"time"
 )
@@ -19,17 +18,17 @@ import (
 // maxSkew: allowed clock skew (e.g., 5 * time.Minute)
 func VerifyAuthSignature(secret []byte, tsStr, claimsB64, sig string, maxSkew time.Duration) error {
 	if tsStr == "" || claimsB64 == "" || sig == "" {
-		return errors.New("missing required auth headers")
+		return errors.New("empty header values")
 	}
 
 	// Parse timestamp
 	ts, err := strconv.ParseInt(tsStr, 10, 64)
 	if err != nil {
-		return fmt.Errorf("invalid X-Auth-Ts: %w", err)
+		return err
 	}
 	now := time.Now().Unix()
 	if ts > now+int64(maxSkew.Seconds()) || ts < now-int64(maxSkew.Seconds()) {
-		return errors.New("X-Auth-Ts out of allowed range")
+		return errors.New("timestamp out of allowed range")
 	}
 
 	// Compute expected signature
@@ -41,7 +40,7 @@ func VerifyAuthSignature(secret []byte, tsStr, claimsB64, sig string, maxSkew ti
 
 	// Compare signatures (constant time)
 	if !hmac.Equal([]byte(expectedSigB64), []byte(sig)) {
-		return errors.New("invalid X-Auth-Sig")
+		return errors.New("invalid signature")
 	}
 	return nil
 }
@@ -53,4 +52,3 @@ func ComputeAuthSignature(secret []byte, tsStr, claimsB64 string) string {
 	h.Write([]byte(msg))
 	return base64.RawStdEncoding.EncodeToString(h.Sum(nil))
 }
-
