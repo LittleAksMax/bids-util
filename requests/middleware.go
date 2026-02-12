@@ -24,24 +24,24 @@ func ValidateAccessToken[TClaims jwt.RegisteredClaims](
 			sigB64 := r.Header.Get("X-Auth-Sig")
 
 			if claimsB64 == "" || tsStr == "" || sigB64 == "" {
-				writeJSON(w, http.StatusUnauthorized, ApiResponse{Success: false, Error: "missing auth headers"})
+				WriteJSON(w, http.StatusUnauthorized, ApiResponse{Success: false, Error: "missing auth headers"})
 				return
 			}
 
 			if err := VerifyAuthSignature(secretBytes, tsStr, claimsB64, sigB64, maxSkew); err != nil {
-				writeJSON(w, http.StatusUnauthorized, ApiResponse{Success: false, Error: "invalid auth signature"})
+				WriteJSON(w, http.StatusUnauthorized, ApiResponse{Success: false, Error: "invalid auth signature"})
 				return
 			}
 
 			claimsJSON, err := base64.RawStdEncoding.DecodeString(claimsB64)
 			if err != nil {
-				writeJSON(w, http.StatusUnauthorized, ApiResponse{Success: false, Error: "invalid auth claims encoding"})
+				WriteJSON(w, http.StatusUnauthorized, ApiResponse{Success: false, Error: "invalid auth claims encoding"})
 				return
 			}
 
 			var claims TClaims
 			if err := json.Unmarshal(claimsJSON, &claims); err != nil {
-				writeJSON(w, http.StatusUnauthorized, ApiResponse{Success: false, Error: "invalid auth claims"})
+				WriteJSON(w, http.StatusUnauthorized, ApiResponse{Success: false, Error: "invalid auth claims"})
 				return
 			}
 
