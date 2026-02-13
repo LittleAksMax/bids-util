@@ -13,15 +13,17 @@ import (
 // ValidateAccessToken validates Forward-Auth headers and injects claims into request context.
 func ValidateAccessToken[TClaims jwt.RegisteredClaims](
 	sharedSecret []byte,
-	authClaimsKey string,
 	maxSkew time.Duration,
+	authClaimsKey string,
+	authTimestampKey string,
+	authSigKey string,
 ) func(http.Handler) http.Handler {
 	secretBytes := []byte(sharedSecret)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			claimsB64 := r.Header.Get("X-Auth-Claims")
-			tsStr := r.Header.Get("X-Auth-Ts")
-			sigB64 := r.Header.Get("X-Auth-Sig")
+			claimsB64 := r.Header.Get(authClaimsKey)
+			tsStr := r.Header.Get(authTimestampKey)
+			sigB64 := r.Header.Get(authSigKey)
 
 			if claimsB64 == "" || tsStr == "" || sigB64 == "" {
 				WriteJSON(w, http.StatusUnauthorized, ApiResponse{Success: false, Error: "missing auth headers"})
