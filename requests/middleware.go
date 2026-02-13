@@ -52,3 +52,17 @@ func ValidateAccessToken[TClaims jwt.RegisteredClaims](
 		})
 	}
 }
+
+// RequireAPIKey is a middleware that validates API key header
+func RequireAPIKey(apiKey, apiKeyKey string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			providedKey := r.Header.Get(apiKeyKey)
+			if providedKey == "" || providedKey != apiKey {
+				WriteJSON(w, http.StatusUnauthorized, APIResponse{Success: false, Error: "invalid or missing API key"})
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
