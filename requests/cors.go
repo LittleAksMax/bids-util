@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 )
 
 // ApplyCORS configures CORS with an allow-all default or a restricted list of origins.
