@@ -29,7 +29,7 @@ func ApplyCORS(r chi.Router, allowedOrigins []string, allowedMethods []string, a
 		AllowedHeaders:   allowedHeaders,
 		ExposedHeaders:   exposedHeaders,
 		AllowCredentials: allowCredentials,
-		MaxAge:           300,
+		MaxAge:           maxAge,
 	})
 
 	r.Use(c)
