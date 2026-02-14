@@ -10,15 +10,22 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// Claims represents access token payload.
+type Claims struct {
+	Role string `json:"role"`
+	Name string `json:"name"`
+	jwt.RegisteredClaims
+}
+
 // ValidateAccessToken validates Forward-Auth headers and injects claims into request context.
-func ValidateAccessToken[TClaims jwt.RegisteredClaims](
+func ValidateAccessToken(
 	sharedSecret []byte,
 	maxSkew time.Duration,
 	authClaimsKey string,
 	authTimestampKey string,
 	authSigKey string,
 ) func(http.Handler) http.Handler {
-	secretBytes := []byte(sharedSecret)
+	secretBytes := sharedSecret
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			claimsB64 := r.Header.Get(authClaimsKey)
@@ -41,7 +48,7 @@ func ValidateAccessToken[TClaims jwt.RegisteredClaims](
 				return
 			}
 
-			var claims TClaims
+			var claims Claims
 			if err := json.Unmarshal(claimsJSON, &claims); err != nil {
 				WriteJSON(w, http.StatusUnauthorized, APIResponse{Success: false, Error: "invalid auth claims"})
 				return
