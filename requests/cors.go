@@ -1,3 +1,11 @@
+package requests
+
+import (
+	"strings"
+
+	"github.com/go-chi/chi/v5"
+)
+
 // ApplyCORS configures CORS with an allow-all default or a restricted list of origins.
 // Pass the ALLOWED_ORIGINS values from config. Use "*" to allow all.
 func ApplyCORS(r chi.Router, allowedOrigins []string, allowedMethods []string, allowedHeaders []string, exposedHeaders []string, allowCredentials bool, maxAge int) {
@@ -16,10 +24,10 @@ func ApplyCORS(r chi.Router, allowedOrigins []string, allowedMethods []string, a
 			}
 			return allowedOrigins
 		}(),
-		AllowedMethods:   allowedMethods,//[]string{"GET", "POST", "PUT", "DELETE"},
-		AllowedHeaders:   allowedHeaders,//[]string{"Accept", "Authorization", "Content-Type", "X-Auth-Claims", "X-Auth-Ts", "X-Auth-Sig"},
-		ExposedHeaders:   exposedHeaders,//[]string{"Set-Cookie"},
-		AllowCredentials: allowCredentials,//true,
+		AllowedMethods:   allowedMethods,
+		AllowedHeaders:   allowedHeaders,
+		ExposedHeaders:   exposedHeaders,
+		AllowCredentials: allowCredentials,
 		MaxAge:           300,
 	})
 
