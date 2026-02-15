@@ -21,13 +21,14 @@ type Claims struct {
 
 // ValidateAccessToken validates Forward-Auth headers and injects claims into request context.
 func ValidateAccessToken(
-	sharedSecret []byte,
+	sharedSecret string,
+	accessTokenSecret string,
 	maxSkew time.Duration,
 	authClaimsKey string,
 	authTimestampKey string,
 	authSigKey string,
 ) func(http.Handler) http.Handler {
-	secretBytes := sharedSecret
+	secretBytes := []byte(sharedSecret)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			claimsB64 := r.Header.Get(authClaimsKey)
@@ -57,11 +58,11 @@ func ValidateAccessToken(
 			if strings.Count(claimsStr, ".") == 2 {
 				// Parse and verify JWT
 				token, err := jwt.ParseWithClaims(claimsStr, &claims, func(t *jwt.Token) (interface{}, error) {
-					// Verify it's using HMAC signing method
+					// Verify we are using HMAC signing method
 					if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 						return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 					}
-					return secretBytes, nil
+					return accessTokenSecret, nil
 				})
 
 				if err != nil || !token.Valid {
