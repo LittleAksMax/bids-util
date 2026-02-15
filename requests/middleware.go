@@ -62,7 +62,7 @@ func ValidateAccessToken(
 					if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 						return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 					}
-					return accessTokenSecret, nil
+					return []byte(accessTokenSecret), nil
 				})
 
 				if err != nil || !token.Valid {
