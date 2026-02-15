@@ -2,9 +2,9 @@ package requests
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -42,14 +42,24 @@ func ValidateAccessToken(
 				return
 			}
 
-			claimsJSON, err := base64.RawStdEncoding.DecodeString(claimsB64)
-			if err != nil {
-				WriteJSON(w, http.StatusUnauthorized, APIResponse{Success: false, Error: "invalid auth claims encoding"})
-				return
-			}
-
+			// claimsB64 is actually a full JWT (header.payload.signature), not just base64-encoded JSON
+			// We need to parse and verify the JWT signature to extract the payload
 			var claims Claims
-			if err := json.Unmarshal(claimsJSON, &claims); err != nil {
+			if strings.Count(claimsB64, ".") == 2 {
+				// Parse and verify JWT
+				token, err := jwt.ParseWithClaims(claimsB64, &claims, func(t *jwt.Token) (interface{}, error) {
+					// Verify it's using HMAC signing method
+					if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+						return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+					}
+					return secretBytes, nil
+				})
+
+				if err != nil || !token.Valid {
+					WriteJSON(w, http.StatusUnauthorized, APIResponse{Success: false, Error: "invalid JWT token"})
+					return
+				}
+			} else {
 				WriteJSON(w, http.StatusUnauthorized, APIResponse{Success: false, Error: "invalid auth claims"})
 				return
 			}
