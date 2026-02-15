@@ -2,6 +2,8 @@ package requests
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -42,12 +44,19 @@ func ValidateAccessToken(
 				return
 			}
 
-			// claimsB64 is actually a full JWT (header.payload.signature), not just base64-encoded JSON
-			// We need to parse and verify the JWT signature to extract the payload
+			// Decode claimsB64 from base64 to get the actual string
+			claimsBytes, err := base64.RawStdEncoding.DecodeString(claimsB64)
+			if err != nil {
+				WriteJSON(w, http.StatusUnauthorized, APIResponse{Success: false, Error: "invalid auth claims encoding"})
+				return
+			}
+			claimsStr := string(claimsBytes)
+
+			// Check if claimsStr is a JWT (header.payload.signature) or plain JSON
 			var claims Claims
-			if strings.Count(claimsB64, ".") == 2 {
+			if strings.Count(claimsStr, ".") == 2 {
 				// Parse and verify JWT
-				token, err := jwt.ParseWithClaims(claimsB64, &claims, func(t *jwt.Token) (interface{}, error) {
+				token, err := jwt.ParseWithClaims(claimsStr, &claims, func(t *jwt.Token) (interface{}, error) {
 					// Verify it's using HMAC signing method
 					if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 						return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
@@ -60,8 +69,11 @@ func ValidateAccessToken(
 					return
 				}
 			} else {
-				WriteJSON(w, http.StatusUnauthorized, APIResponse{Success: false, Error: "invalid auth claims"})
-				return
+				// Plain JSON - unmarshal directly
+				if err := json.Unmarshal(claimsBytes, &claims); err != nil {
+					WriteJSON(w, http.StatusUnauthorized, APIResponse{Success: false, Error: "invalid auth claims"})
+					return
+				}
 			}
 
 			ctx := context.WithValue(r.Context(), authClaimsKey, &claims)
