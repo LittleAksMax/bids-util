@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 // Claims represents access token payload.
@@ -78,6 +79,22 @@ func ValidateAccessToken(
 			}
 
 			ctx := context.WithValue(r.Context(), authClaimsKey, &claims)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+func EnsureValidSubject(claimsKey, uuidSubjectKey string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Extract claims from context (guaranteed by middleware)
+			claims := r.Context().Value(claimsKey).(*Claims)
+			uuidSubject, err := uuid.Parse(claims.Subject)
+			if err != nil {
+				WriteJSON(w, http.StatusUnauthorized, APIResponse{Success: false, Error: "invalid user id in claims"})
+				return
+			}
+			ctx := context.WithValue(r.Context(), uuidSubjectKey, uuidSubject)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
