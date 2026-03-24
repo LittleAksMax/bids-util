@@ -10,191 +10,75 @@ import (
 
 // ValidateEmails checks if fields marked with validate:"email" have valid email format.
 func ValidateEmails(v interface{}) error {
-	val := reflect.ValueOf(v)
-	if val.Kind() == reflect.Ptr {
-		val = val.Elem()
-	}
-	typ := val.Type()
-
-	var invalidFields []string
-
-	for i := 0; i < val.NumField(); i++ {
-		field := typ.Field(i)
-		fieldValue := val.Field(i)
-
-		// Check if field has validated tag with "email"
-		validateTag := field.Tag.Get("validate")
-		if !strings.Contains(validateTag, "email") {
-			continue
+	invalidFields := ValidateByTag(v, "email", func(field reflect.StructField, value reflect.Value) bool {
+		if value.Kind() != reflect.String {
+			return false
 		}
-
-		// Only validate string fields
-		if fieldValue.Kind() == reflect.String {
-			emailStr := fieldValue.String()
-			// Skip empty strings - let required validation handle that
-			if emailStr == "" {
-				continue
-			}
-
-			// Validate email format using net/mail
-			if _, err := mail.ParseAddress(emailStr); err != nil {
-				jsonTag := field.Tag.Get("json")
-				fieldName := strings.Split(jsonTag, ",")[0]
-				if fieldName == "" {
-					fieldName = field.Name
-				}
-				invalidFields = append(invalidFields, fieldName)
-			}
+		emailStr := value.String()
+		if emailStr == "" {
+			return false // let required validation handle empty
 		}
-	}
-
+		_, err := mail.ParseAddress(emailStr)
+		return err != nil
+	})
 	if len(invalidFields) > 0 {
 		return &EmailValidationError{Fields: invalidFields}
 	}
-
 	return nil
 }
 
 // ValidateUUIDs checks if fields marked with validate:"uuid" have valid UUID format.
 func ValidateUUIDs(v interface{}) error {
-	val := reflect.ValueOf(v)
-	if val.Kind() == reflect.Ptr {
-		val = val.Elem()
-	}
-	typ := val.Type()
-
-	var invalidFields []string
-
-	for i := 0; i < val.NumField(); i++ {
-		field := typ.Field(i)
-		fieldValue := val.Field(i)
-
-		// Check if field has validate tag with "uuid"
-		validateTag := field.Tag.Get("validate")
-		if !strings.Contains(validateTag, "uuid") {
-			continue
+	invalidFields := ValidateByTag(v, "uuid", func(field reflect.StructField, value reflect.Value) bool {
+		if value.Kind() != reflect.String {
+			return false
 		}
-
-		// Only validate string fields
-		if fieldValue.Kind() == reflect.String {
-			uuidStr := fieldValue.String()
-			// Skip empty strings - let required validation handle that
-			if uuidStr == "" {
-				continue
-			}
-
-			// Validate UUID format using google/uuid
-			if err := uuid.Validate(uuidStr); err != nil {
-				jsonTag := field.Tag.Get("json")
-				fieldName := strings.Split(jsonTag, ",")[0]
-				if fieldName == "" {
-					fieldName = field.Name
-				}
-				invalidFields = append(invalidFields, fieldName)
-			}
+		uuidStr := value.String()
+		if uuidStr == "" {
+			return false // let required validation handle empty
 		}
-	}
-
+		return uuid.Validate(uuidStr) != nil
+	})
 	if len(invalidFields) > 0 {
 		return &UUIDValidationError{Fields: invalidFields}
 	}
-
 	return nil
 }
 
 // ValidatePasswords checks if fields marked with validate:"password" meet minimum strength requirements.
 func ValidatePasswords(v interface{}) error {
-	val := reflect.ValueOf(v)
-	if val.Kind() == reflect.Ptr {
-		val = val.Elem()
-	}
-	typ := val.Type()
-
-	var invalidFields []string
-
-	for i := 0; i < val.NumField(); i++ {
-		field := typ.Field(i)
-		fieldValue := val.Field(i)
-
-		// Check if field has validate tag with "password"
-		validateTag := field.Tag.Get("validate")
-		if !strings.Contains(validateTag, "password") {
-			continue
+	invalidFields := ValidateByTag(v, "password", func(field reflect.StructField, value reflect.Value) bool {
+		if value.Kind() != reflect.String {
+			return false
 		}
-
-		// Only validate string fields
-		if fieldValue.Kind() == reflect.String {
-			passwordStr := fieldValue.String()
-			// Skip empty strings - let required validation handle that
-			if passwordStr == "" {
-				continue
-			}
-
-			// Validate password strength (minimum 8 characters)
-			if len(passwordStr) < 8 {
-				jsonTag := field.Tag.Get("json")
-				fieldName := strings.Split(jsonTag, ",")[0]
-				if fieldName == "" {
-					fieldName = field.Name
-				}
-				invalidFields = append(invalidFields, fieldName)
-			}
+		passwordStr := value.String()
+		if passwordStr == "" {
+			return false // let required validation handle empty
 		}
-	}
-
+		return len(passwordStr) < 8
+	})
 	if len(invalidFields) > 0 {
 		return &PasswordValidationError{Fields: invalidFields}
 	}
-
 	return nil
 }
 
 // ValidateRoles checks if fields marked with validate:"role" contain allowed role values.
 func ValidateRoles(v interface{}) error {
-	val := reflect.ValueOf(v)
-	if val.Kind() == reflect.Ptr {
-		val = val.Elem()
-	}
-	typ := val.Type()
-
-	var invalidFields []string
-	allowed := map[string]struct{}{
-		"user":  {},
-		"admin": {},
-	}
-
-	for i := 0; i < val.NumField(); i++ {
-		field := typ.Field(i)
-		fieldValue := val.Field(i)
-
-		// Check if field has validate tag with "role"
-		validateTag := field.Tag.Get("validate")
-		if !strings.Contains(validateTag, "role") {
-			continue
+	allowed := map[string]struct{}{"user": {}, "admin": {}}
+	invalidFields := ValidateByTag(v, "role", func(field reflect.StructField, value reflect.Value) bool {
+		if value.Kind() != reflect.String {
+			return false
 		}
-
-		// Only validate string fields
-		if fieldValue.Kind() == reflect.String {
-			roleStr := strings.ToLower(strings.TrimSpace(fieldValue.String()))
-			// Skip empty strings - let required validation handle that
-			if roleStr == "" {
-				continue
-			}
-
-			if _, ok := allowed[roleStr]; !ok {
-				jsonTag := field.Tag.Get("json")
-				fieldName := strings.Split(jsonTag, ",")[0]
-				if fieldName == "" {
-					fieldName = field.Name
-				}
-				invalidFields = append(invalidFields, fieldName)
-			}
+		roleStr := strings.ToLower(strings.TrimSpace(value.String()))
+		if roleStr == "" {
+			return false // let required validation handle empty
 		}
-	}
-
+		_, ok := allowed[roleStr]
+		return !ok
+	})
 	if len(invalidFields) > 0 {
 		return &RoleValidationError{Fields: invalidFields}
 	}
-
 	return nil
 }
