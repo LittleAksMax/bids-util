@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"reflect"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -32,17 +33,47 @@ func ValidateRequest[T any](validationFuncs []func(T any) error) func(http.Handl
 				return
 			}
 
-			for _, validate := range validationFuncs {
-				if err := validate(&reqValue); err != nil {
-					WriteJSON(w, http.StatusBadRequest, APIResponse{Success: false, Error: err.Error()})
-					return
-				}
+			if err := validateRequestBody(&reqValue, validationFuncs); err != nil {
+				WriteJSON(w, http.StatusBadRequest, APIResponse{Success: false, Error: err.Error()})
+				return
 			}
 
 			ctx := context.WithValue(r.Context(), RequestBodyKey, &reqValue)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+func validateRequestBody(value any, validationFuncs []func(any) error) error {
+	reflectValue := reflect.ValueOf(value)
+	for reflectValue.Kind() == reflect.Ptr {
+		if reflectValue.IsNil() {
+			return applyValidations(value, validationFuncs)
+		}
+		reflectValue = reflectValue.Elem()
+	}
+
+	if reflectValue.Kind() != reflect.Slice && reflectValue.Kind() != reflect.Array {
+		return applyValidations(value, validationFuncs)
+	}
+
+	for i := 0; i < reflectValue.Len(); i++ {
+		if err := applyValidations(reflectValue.Index(i).Interface(), validationFuncs); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func applyValidations(value any, validationFuncs []func(any) error) error {
+	for _, validate := range validationFuncs {
+		if err := validate(value); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // GetRequestBody retrieves the validated request body from the context.
