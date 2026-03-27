@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-// ApiResponse reused for controller JSON responses.
+// APIResponse reused for controller JSON responses.
 type APIResponse struct {
 	Success bool        `json:"success"`
 	Data    interface{} `json:"data,omitempty"`

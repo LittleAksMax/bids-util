@@ -113,3 +113,31 @@ func RequireAPIKey(apiKey, apiKeyHeaderKey string) func(http.Handler) http.Handl
 		})
 	}
 }
+
+// InjectUUIDSubjectFromHeader parses a trusted UUID header and stores it under the standard subject context key.
+func InjectUUIDSubjectFromHeader(headerKey, contextKey string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			rawUserID := r.Header.Get(headerKey)
+			if rawUserID == "" {
+				WriteJSON(w, http.StatusBadRequest, APIResponse{
+					Success: false,
+					Error:   "missing user ID header",
+				})
+				return
+			}
+
+			userID, err := uuid.Parse(rawUserID)
+			if err != nil {
+				WriteJSON(w, http.StatusBadRequest, APIResponse{
+					Success: false,
+					Error:   "invalid user ID header",
+				})
+				return
+			}
+
+			ctx := context.WithValue(r.Context(), contextKey, userID)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
