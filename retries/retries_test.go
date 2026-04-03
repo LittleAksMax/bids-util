@@ -9,7 +9,7 @@ import (
 
 func TestRetryRetriesUntilSuccess(t *testing.T) {
 	attempts := 0
-	retried := Retry(2, 0, nil, func(ctx context.Context) error {
+	retried := Retry(3, 0, nil, func(ctx context.Context) error {
 		attempts++
 		if attempts < 3 {
 			return errors.New("boom")
@@ -38,8 +38,8 @@ func TestRetryStopsAfterMaxRetries(t *testing.T) {
 	if !errors.Is(err, expectedErr) {
 		t.Fatalf("expected %v, got %v", expectedErr, err)
 	}
-	if attempts != 3 {
-		t.Fatalf("expected 3 attempts, got %d", attempts)
+	if attempts != 2 {
+		t.Fatalf("expected 2 attempts, got %d", attempts)
 	}
 }
 
@@ -89,19 +89,21 @@ func TestRetryReturnsWhenContextCanceledDuringWait(t *testing.T) {
 	}
 }
 
-func TestRetryAllowsNegativeMaxRetries(t *testing.T) {
-	attempts := 0
-	expectedErr := errors.New("boom")
+func TestRetryPanicsOnNegativeMaxAttempts(t *testing.T) {
 	retried := Retry(-10, 0, nil, func(ctx context.Context) error {
-		attempts++
-		return expectedErr
+		t.Fatal("wrapped function should not be called")
+		return nil
 	})
 
-	err := retried(context.Background())
-	if !errors.Is(err, expectedErr) {
-		t.Fatalf("expected %v, got %v", expectedErr, err)
-	}
-	if attempts != 1 {
-		t.Fatalf("expected 1 attempt, got %d", attempts)
-	}
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			t.Fatal("expected panic for negative max attempts")
+		}
+		if recovered != "retries: unreachable" {
+			t.Fatalf("expected retries: unreachable panic, got %v", recovered)
+		}
+	}()
+
+	_ = retried(context.Background())
 }
