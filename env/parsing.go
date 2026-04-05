@@ -34,7 +34,7 @@ func GetIntFromEnv(key string) int {
 func ReadPort(key string) int {
 	port := GetIntFromEnv(key)
 
-	if port < 1024 || port > 65353 {
+	if port < 1024 || port > 65535 {
 		log.Panicf("Error converting environment variable <%s> to int between 1024 and 65353", key)
 	}
 	return port
@@ -45,7 +45,7 @@ func ParseDurationEnv(key string) time.Duration {
 	if val == "" {
 		log.Panicf("%s is not set in environment", key)
 	}
-	
+
 	duration, err := time.ParseDuration(val)
 	if err != nil {
 		log.Panicf("Error converting environment variable <%s> to time duration", key)
